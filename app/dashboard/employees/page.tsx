@@ -186,7 +186,9 @@ export default function EmployeesPage() {
   };
 
   // One-click assign the Care Certificate bundle
-  const assignCareCertBundle = async () => {
+  const assignCareCertBundle = async (
+    employee: Profile
+  ) => {
   if (!bundleModal) return;
 
   try {
