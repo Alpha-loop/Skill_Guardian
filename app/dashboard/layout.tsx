@@ -183,7 +183,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 
 
-function SubscriptionRequired(profile: any) {
+function SubscriptionRequired({
+  profile,
+}: {
+  profile: any;
+}) {
+  
 
   const {
     organisation,
@@ -191,6 +196,7 @@ function SubscriptionRequired(profile: any) {
   const router = useRouter();
 
   const handleRenewSubscription = async () => {
+    console.log('button clicked!!!')
     try {
       const {
         data: { session },
