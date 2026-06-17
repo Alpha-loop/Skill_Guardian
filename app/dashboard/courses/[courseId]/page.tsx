@@ -8,11 +8,13 @@ import { Course, Flashcard, QuizQuestion, UserCourse } from '@/lib/types';
 import {
   ArrowLeft, ArrowRight, RotateCcw, CheckCircle, XCircle,
   BookOpen, Award, ChevronLeft, ChevronRight, Loader2,
-  Star, Clock, Target, Trophy, Lock, AlertTriangle
+  Star, Clock, Target, Trophy, Lock, AlertTriangle,
+  Plus, Pencil, Trash2, X, GripVertical, HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -33,6 +35,26 @@ export default function CourseDetailPage() {
   const [prerequisitePassed, setPrerequisitePassed] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>('overview');
+
+  const isSuperAdmin = profile?.role === 'super_admin';
+
+  // Admin content panel state
+  const [adminTab, setAdminTab] = useState<'flashcards' | 'quiz'>('flashcards');
+  const [fcModalOpen, setFcModalOpen] = useState(false);
+  const [editingFc, setEditingFc] = useState<Flashcard | null>(null);
+  const [fcForm, setFcForm] = useState({ question_text: '', answer_text: '' });
+  const [fcSaving, setFcSaving] = useState(false);
+
+  const [qModalOpen, setQModalOpen] = useState(false);
+  const [editingQ, setEditingQ] = useState<QuizQuestion | null>(null);
+  const [qForm, setQForm] = useState({
+    question_text: '', option_a: '', option_b: '', option_c: '', option_d: '',
+    correct_option: 'A' as 'A' | 'B' | 'C' | 'D',
+    explanation: '',
+  });
+  const [qSaving, setQSaving] = useState(false);
+  const [deleteFcConfirm, setDeleteFcConfirm] = useState<string | null>(null);
+  const [deleteQConfirm, setDeleteQConfirm] = useState<string | null>(null);
 
   // Flashcard state
   const [cardIndex, setCardIndex] = useState(0);
@@ -62,6 +84,31 @@ export default function CourseDetailPage() {
       setQuestions(quizRes.data as QuizQuestion[] ?? []);
       setUserCourse(ucRes.data as UserCourse);
 
+
+      const savedUserCourse =
+        ucRes.data as UserCourse;
+
+      if (savedUserCourse) {
+
+        if (
+          savedUserCourse.current_phase ===
+          'flashcards'
+        ) {
+          setPhase('flashcards');
+
+          setCardIndex(
+            savedUserCourse.current_flashcard_index || 0
+          );
+        }
+
+        if (
+          savedUserCourse.current_phase ===
+          'quiz'
+        ) {
+          setPhase('quiz');
+        }
+      }
+
       // Check prerequisite
       if (courseData?.prerequisite_course_id) {
         const [prereqRes, prereqUcRes] = await Promise.all([
@@ -77,9 +124,39 @@ export default function CourseDetailPage() {
     load();
   }, [profile, courseId]);
 
+  const fcProgressKey = `sg_fc_${profile?.id}_${courseId}`;
+
+  useEffect(() => {
+    if (!userCourse) return;
+
+    supabase
+      .from('user_courses')
+      .update({
+        current_phase: 'flashcards',
+        current_flashcard_index: cardIndex,
+      })
+      .eq('id', userCourse.id);
+
+  }, [cardIndex]);
+
+  useEffect(() => {
+    if (!userCourse) return;
+
+    supabase
+      .from('user_courses')
+      .update({
+        current_phase: 'quiz',
+        quiz_answers: answers,
+      })
+      .eq('id', userCourse.id);
+
+  }, [answers]);
+
   const startFlashcards = async () => {
     if (!profile) return;
-    setCardIndex(0);
+    const saved = localStorage.getItem(fcProgressKey);
+    const resumeIndex = saved ? parseInt(saved, 10) : 0;
+    setCardIndex(isNaN(resumeIndex) ? 0 : resumeIndex);
     setFlipped(false);
     setPhase('flashcards');
 
@@ -98,14 +175,23 @@ export default function CourseDetailPage() {
     }
   };
 
-  const finishFlashcards = async () => {
+  useEffect(() => {
+    if (phase === 'flashcards') {
+      localStorage.setItem(fcProgressKey, String(cardIndex));
+    }
+  }, [cardIndex, phase, fcProgressKey]);
+
+  const finishFlashcards = async (completed = false) => {
     if (!userCourse || !profile) return;
+    if (completed) {
+      localStorage.removeItem(fcProgressKey);
+    }
     await supabase.from('user_courses')
       .update({ review_count: (userCourse.review_count ?? 0) + 1, last_reviewed_at: new Date().toISOString() })
       .eq('id', userCourse.id);
     setUserCourse(prev => prev ? { ...prev, review_count: (prev.review_count ?? 0) + 1 } : prev);
     setPhase('overview');
-    toast({ title: 'Great work!', description: 'Flashcards reviewed. Ready to take the quiz when you feel confident.' });
+    toast({ title: 'Great work!', description: completed ? 'All flashcards reviewed! Ready to take the quiz.' : 'Progress saved. Pick up where you left off next time.' });
   };
 
   const startQuiz = () => {
@@ -117,6 +203,129 @@ export default function CourseDetailPage() {
     setQuizIndex(0);
     setQuizSubmitted(false);
     setPhase('quiz');
+  };
+
+  const openAddFlashcard = () => {
+    setEditingFc(null);
+    setFcForm({ question_text: '', answer_text: '' });
+    setFcModalOpen(true);
+  };
+
+  const openEditFlashcard = (fc: Flashcard) => {
+    setEditingFc(fc);
+    setFcForm({ question_text: fc.question_text, answer_text: fc.answer_text });
+    setFcModalOpen(true);
+  };
+
+  const handleSaveFlashcard = async () => {
+    if (!fcForm.question_text.trim() || !fcForm.answer_text.trim()) {
+      toast({ title: 'Both question and answer are required.', variant: 'destructive' });
+      return;
+    }
+    setFcSaving(true);
+    if (editingFc) {
+      const { error } = await supabase.from('flashcards')
+        .update({ question_text: fcForm.question_text.trim(), answer_text: fcForm.answer_text.trim() })
+        .eq('id', editingFc.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        setFlashcards(prev => prev.map(f => f.id === editingFc.id ? { ...f, ...fcForm } : f));
+        setFcModalOpen(false);
+        toast({ title: 'Flashcard updated' });
+      }
+    } else {
+      const newIndex = flashcards.length;
+      const { data, error } = await supabase.from('flashcards').insert({
+        course_id: courseId,
+        question_text: fcForm.question_text.trim(),
+        answer_text: fcForm.answer_text.trim(),
+        order_index: newIndex,
+        difficulty: 1,
+      }).select().maybeSingle();
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        setFlashcards(prev => [...prev, data as Flashcard]);
+        setFcModalOpen(false);
+        toast({ title: 'Flashcard added' });
+      }
+    }
+    setFcSaving(false);
+  };
+
+  const handleDeleteFlashcard = async (id: string) => {
+    const { error } = await supabase.from('flashcards').delete().eq('id', id);
+    if (!error) {
+      setFlashcards(prev => prev.filter(f => f.id !== id));
+      setDeleteFcConfirm(null);
+    }
+  };
+
+  // ── Quiz question admin handlers ──────────────────────────────────────────
+  const openAddQuestion = () => {
+    setEditingQ(null);
+    setQForm({ question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: 'A', explanation: '' });
+    setQModalOpen(true);
+  };
+
+  const openEditQuestion = (q: QuizQuestion) => {
+    setEditingQ(q);
+    setQForm({
+      question_text: q.question_text,
+      option_a: q.option_a,
+      option_b: q.option_b,
+      option_c: q.option_c,
+      option_d: q.option_d,
+      correct_option: q.correct_option,
+      explanation: q.explanation ?? '',
+    });
+    setQModalOpen(true);
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!qForm.question_text.trim() || !qForm.option_a.trim() || !qForm.option_b.trim() || !qForm.option_c.trim() || !qForm.option_d.trim()) {
+      toast({ title: 'All fields are required.', variant: 'destructive' });
+      return;
+    }
+    setQSaving(true);
+    const payload = {
+      question_text: qForm.question_text.trim(),
+      option_a: qForm.option_a.trim(),
+      option_b: qForm.option_b.trim(),
+      option_c: qForm.option_c.trim(),
+      option_d: qForm.option_d.trim(),
+      correct_option: qForm.correct_option,
+      explanation: qForm.explanation.trim(),
+    };
+    if (editingQ) {
+      const { error } = await supabase.from('quiz_questions').update(payload).eq('id', editingQ.id);
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        setQuestions(prev => prev.map(q => q.id === editingQ.id ? { ...q, ...payload } : q));
+        setQModalOpen(false);
+        toast({ title: 'Question updated' });
+      }
+    } else {
+      const { data, error } = await supabase.from('quiz_questions').insert({ course_id: courseId, ...payload }).select().maybeSingle();
+      if (error) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        setQuestions(prev => [...prev, data as QuizQuestion]);
+        setQModalOpen(false);
+        toast({ title: 'Question added' });
+      }
+    }
+    setQSaving(false);
+  };
+
+  const handleDeleteQuestion = async (id: string) => {
+    const { error } = await supabase.from('quiz_questions').delete().eq('id', id);
+    if (!error) {
+      setQuestions(prev => prev.filter(q => q.id !== id));
+      setDeleteQConfirm(null);
+    }
   };
 
   const submitQuiz = async () => {
@@ -131,12 +340,26 @@ export default function CourseDetailPage() {
     setScore(pct);
     setQuizSubmitted(true);
 
-    await supabase.from('user_courses').update({
-      quiz_score: pct,
-      quiz_attempts: (userCourse.quiz_attempts ?? 0) + 1,
-      status: passed ? 'passed' : 'failed',
-      completed_at: passed ? new Date().toISOString() : null,
-    }).eq('id', userCourse.id);
+    await supabase
+      .from('user_courses')
+      .update({
+        quiz_score: pct,
+        quiz_attempts:
+          (userCourse.quiz_attempts ?? 0) + 1,
+
+        status:
+          passed ? 'passed' : 'failed',
+
+        completed_at:
+          passed
+            ? new Date().toISOString()
+            : null,
+
+        current_phase: 'results',
+        current_flashcard_index: 0,
+        quiz_answers: {},
+      })
+      .eq('id', userCourse.id);
 
     setUserCourse(prev => prev ? {
       ...prev,
@@ -212,7 +435,8 @@ export default function CourseDetailPage() {
         setFlipped={setFlipped}
         onNext={() => { setFlipped(false); setTimeout(() => setCardIndex(i => i + 1), 150); }}
         onPrev={() => { setFlipped(false); setTimeout(() => setCardIndex(i => i - 1), 150); }}
-        onFinish={finishFlashcards}
+        onExit={() => finishFlashcards(false)}
+        onFinish={() => finishFlashcards(true)}
         course={course}
       />
     );
@@ -252,6 +476,8 @@ export default function CourseDetailPage() {
   // Overview phase
   const reviewCount = userCourse?.review_count ?? 0;
   const status = userCourse?.status ?? 'not_started';
+  const savedProgress = typeof window !== 'undefined' ? parseInt(localStorage.getItem(`sg_fc_${profile?.id}_${courseId}`) ?? '0', 10) || 0 : 0;
+  const hasPartialProgress = savedProgress > 0 && savedProgress < flashcards.length - 1;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
@@ -274,6 +500,8 @@ export default function CourseDetailPage() {
               </div>
             </div>
           </div>
+
+          
 
           <div className="p-6">
             {/* Status & Stats */}
@@ -345,7 +573,9 @@ export default function CourseDetailPage() {
                 >
                   {prerequisiteCourse && !prerequisitePassed
                     ? <><Lock className="w-4 h-4 mr-2" />Locked</>
-                    : <><BookOpen className="w-4 h-4 mr-2" />{reviewCount === 0 ? 'Start Flashcards' : 'Review Flashcards'}</>
+                    : hasPartialProgress
+                      ? <><RotateCcw className="w-4 h-4 mr-2" />Resume — Card {savedProgress + 1} of {flashcards.length}</>
+                      : <><BookOpen className="w-4 h-4 mr-2" />{reviewCount === 0 ? 'Start Flashcards' : 'Review Flashcards'}</>
                   }
                 </Button>
               )}
@@ -369,14 +599,323 @@ export default function CourseDetailPage() {
             </div>
           </div>
         </div>
+
+        {isSuperAdmin && (
+          <div className="mt-6">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              {/* Tab bar */}
+              <div className="border-b border-slate-200 px-6 flex items-center justify-between">
+                <div className="flex">
+                  {(['flashcards', 'quiz'] as const).map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => setAdminTab(tab)}
+                      className={cn(
+                        'py-4 px-1 mr-6 text-sm font-medium border-b-2 transition-colors',
+                        adminTab === tab
+                          ? 'border-[#005EB8] text-[#005EB8]'
+                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                      )}
+                    >
+                      {tab === 'flashcards'
+                        ? `Flashcards (${flashcards.length})`
+                        : `Quiz Questions (${questions.length})`
+                      }
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={adminTab === 'flashcards' ? openAddFlashcard : openAddQuestion}
+                  className="bg-[#005EB8] hover:bg-[#004a93] text-white"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Add {adminTab === 'flashcards' ? 'Flashcard' : 'Question'}
+                </Button>
+              </div>
+
+              {/* Flashcards list */}
+              {adminTab === 'flashcards' && (
+                <div className="divide-y divide-slate-100">
+                  {flashcards.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400">
+                      <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm font-medium">No flashcards yet</p>
+                      <p className="text-xs mt-1">Add the first flashcard to this course</p>
+                    </div>
+                  ) : (
+                    flashcards.map((fc, idx) => (
+                      <div key={fc.id} className="px-6 py-4 flex items-start gap-4 hover:bg-slate-50 group">
+                        <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 mb-1">{fc.question_text}</p>
+                          <p className="text-xs text-slate-500 leading-relaxed">{fc.answer_text}</p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openEditFlashcard(fc)}
+                            className="w-7 h-7 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          {deleteFcConfirm === fc.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleDeleteFlashcard(fc.id)}
+                                className="px-2 py-0.5 rounded text-xs bg-red-600 text-white font-medium"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                onClick={() => setDeleteFcConfirm(null)}
+                                className="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteFcConfirm(fc.id)}
+                              className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Quiz questions list */}
+              {adminTab === 'quiz' && (
+                <div className="divide-y divide-slate-100">
+                  {questions.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400">
+                      <HelpCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm font-medium">No quiz questions yet</p>
+                      <p className="text-xs mt-1">Add questions to enable the quiz</p>
+                    </div>
+                  ) : (
+                    questions.map((q, idx) => (
+                      <div key={q.id} className="px-6 py-4 hover:bg-slate-50 group">
+                        <div className="flex items-start gap-4">
+                          <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 mb-2">{q.question_text}</p>
+                            <div className="grid grid-cols-2 gap-1.5 mb-2">
+                              {(['A', 'B', 'C', 'D'] as const).map(opt => (
+                                <div
+                                  key={opt}
+                                  className={cn(
+                                    'flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs',
+                                    q.correct_option === opt
+                                      ? 'bg-emerald-50 text-emerald-700 font-medium'
+                                      : 'bg-slate-50 text-slate-600'
+                                  )}
+                                >
+                                  <span className={cn(
+                                    'w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0',
+                                    q.correct_option === opt ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
+                                  )}>
+                                    {opt}
+                                  </span>
+                                  {q[`option_${opt.toLowerCase()}` as keyof QuizQuestion] as string}
+                                </div>
+                              ))}
+                            </div>
+                            {q.explanation && (
+                              <p className="text-xs text-slate-400 italic">{q.explanation}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEditQuestion(q)}
+                              className="w-7 h-7 rounded-lg hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            {deleteQConfirm === q.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleDeleteQuestion(q.id)}
+                                  className="px-2 py-0.5 rounded text-xs bg-red-600 text-white font-medium"
+                                >
+                                  Delete
+                                </button>
+                                <button
+                                  onClick={() => setDeleteQConfirm(null)}
+                                  className="px-2 py-0.5 rounded text-xs bg-slate-200 text-slate-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setDeleteQConfirm(q.id)}
+                                className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {isSuperAdmin && fcModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setFcModalOpen(false)} />
+          <div className="relative bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl z-10">
+            <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-base font-semibold text-slate-900">
+                {editingFc ? 'Edit Flashcard' : 'Add Flashcard'}
+              </h2>
+              <button onClick={() => setFcModalOpen(false)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Question / Front <span className="text-red-500">*</span></label>
+                <textarea
+                  value={fcForm.question_text}
+                  onChange={e => setFcForm(f => ({ ...f, question_text: e.target.value }))}
+                  rows={3}
+                  placeholder="What is the purpose of a risk assessment?"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Answer / Back <span className="text-red-500">*</span></label>
+                <textarea
+                  value={fcForm.answer_text}
+                  onChange={e => setFcForm(f => ({ ...f, answer_text: e.target.value }))}
+                  rows={3}
+                  placeholder="To identify, evaluate, and mitigate potential hazards..."
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                />
+              </div>
+            </div>
+            <div className="border-t border-slate-200 px-6 py-4 flex gap-3">
+              <Button variant="outline" onClick={() => setFcModalOpen(false)} className="flex-1">Cancel</Button>
+              <Button onClick={handleSaveFlashcard} disabled={fcSaving} className="flex-1 bg-[#005EB8] hover:bg-[#004a93] text-white">
+                {fcSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingFc ? 'Save Changes' : 'Add Flashcard'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quiz question modal ──────────────────────────────────────────────── */}
+      {isSuperAdmin && qModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setQModalOpen(false)} />
+          <div className="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-y-auto max-h-[90vh] z-10">
+            <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <h2 className="text-base font-semibold text-slate-900">
+                {editingQ ? 'Edit Question' : 'Add Quiz Question'}
+              </h2>
+              <button onClick={() => setQModalOpen(false)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Question <span className="text-red-500">*</span></label>
+                <textarea
+                  value={qForm.question_text}
+                  onChange={e => setQForm(f => ({ ...f, question_text: e.target.value }))}
+                  rows={2}
+                  placeholder="What is the correct procedure for..."
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(['a', 'b', 'c', 'd'] as const).map(opt => (
+                  <div key={opt}>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-2">
+                      <span className={cn(
+                        'w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center',
+                        qForm.correct_option === opt.toUpperCase()
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-200 text-slate-600'
+                      )}>
+                        {opt.toUpperCase()}
+                      </span>
+                      Option {opt.toUpperCase()} {qForm.correct_option === opt.toUpperCase() && <span className="text-emerald-600 text-xs font-normal">(correct)</span>}
+                    </label>
+                    <Input
+                      value={qForm[`option_${opt}` as keyof typeof qForm] as string}
+                      onChange={e => setQForm(f => ({ ...f, [`option_${opt}`]: e.target.value }))}
+                      placeholder={`Option ${opt.toUpperCase()}...`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Correct Answer</label>
+                <div className="flex gap-2">
+                  {(['A', 'B', 'C', 'D'] as const).map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setQForm(f => ({ ...f, correct_option: opt }))}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all',
+                        qForm.correct_option === opt
+                          ? 'bg-emerald-500 border-emerald-500 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300'
+                      )}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Explanation <span className="text-slate-400 font-normal">optional</span>
+                </label>
+                <textarea
+                  value={qForm.explanation}
+                  onChange={e => setQForm(f => ({ ...f, explanation: e.target.value }))}
+                  rows={2}
+                  placeholder="Brief explanation of why this answer is correct..."
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                />
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex gap-3">
+              <Button variant="outline" onClick={() => setQModalOpen(false)} className="flex-1">Cancel</Button>
+              <Button onClick={handleSaveQuestion} disabled={qSaving} className="flex-1 bg-[#005EB8] hover:bg-[#004a93] text-white">
+                {qSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingQ ? 'Save Changes' : 'Add Question'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function FlashcardPhase({
   flashcards, cardIndex, flipped, setFlipped,
-  onNext, onPrev, onFinish, course
+  onNext, onPrev, onExit, onFinish, course
 }: {
   flashcards: Flashcard[];
   cardIndex: number;
@@ -384,19 +923,21 @@ function FlashcardPhase({
   setFlipped: (v: boolean) => void;
   onNext: () => void;
   onPrev: () => void;
+  onExit: () => void;
   onFinish: () => void;
   course: Course;
 }) {
   const card = flashcards[cardIndex];
   const progress = ((cardIndex + 1) / flashcards.length) * 100;
   const isLast = cardIndex === flashcards.length - 1;
+  const isResumed = cardIndex > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-2xl mx-auto flex items-center gap-4">
-          <button onClick={onFinish} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onExit} className="text-slate-400 hover:text-slate-600">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
@@ -410,6 +951,12 @@ function FlashcardPhase({
       {/* Card */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-2xl">
+          {isResumed && (
+            <div className="flex items-center justify-center gap-1.5 mb-4">
+              <RotateCcw className="w-3.5 h-3.5 text-[#005EB8]" />
+              <p className="text-xs text-[#005EB8] font-medium">Resumed from card {cardIndex + 1}</p>
+            </div>
+          )}
           <p className="text-center text-sm text-slate-500 mb-6">Click the card to reveal the answer</p>
 
           <div

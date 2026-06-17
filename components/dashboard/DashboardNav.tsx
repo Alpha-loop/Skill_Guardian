@@ -7,6 +7,7 @@ import {
   Home, BookOpen, Award, Users, BarChart3,
   LogOut, Menu, X, Building2, ChevronRight,
   Bell, FileCheck, AlertTriangle, Clock, CheckCircle, Info, ClipboardList, User, Settings,
+  CreditCard
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +34,7 @@ const adminNav = [
   { href: '/dashboard/profile',      icon: User,      label: 'My Profile' },
   { href: '/dashboard/settings',     icon: Settings,  label: 'Settings' },
   { href: '/dashboard/notifications', icon: Bell,      label: 'Notifications' },
-  { href: '/dashboard/billing', icon: Bell,      label: 'Billing' },
+  { href: '/dashboard/billing', icon: CreditCard,      label: 'Billing' },
 ];
 
 const superAdminNav = [

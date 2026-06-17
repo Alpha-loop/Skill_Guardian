@@ -103,6 +103,8 @@ export interface UserCourse {
   completed_at: string | null;
   review_count: number;
   last_reviewed_at: string | null;
+  current_phase: string | null;
+  current_flashcard_index: number | null;
 }
 
 export interface CertificateRequest {

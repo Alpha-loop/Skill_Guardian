@@ -109,7 +109,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+        {/* <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
           <p className="text-xs text-blue-700 font-medium mb-2">Demo accounts (password: Demo1234!)</p>
           <div className="space-y-1.5 text-xs">
             {[
@@ -132,7 +132,7 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

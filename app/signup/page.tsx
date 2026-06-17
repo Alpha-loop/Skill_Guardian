@@ -82,7 +82,7 @@ const plans: {
     name: 'Premium',
     price: '£199',
     period: '/month',
-    seats: 'Unlimited staff',
+    seats: 'Up to 100 staff',
     description: 'For large organisations',
     highlighted: false,
     features: [

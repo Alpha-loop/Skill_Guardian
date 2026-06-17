@@ -152,7 +152,7 @@ const plans = [
       'Certificate approval workflow',
       'Priority email support',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     highlighted: true,
     color: '',
   },
@@ -161,7 +161,7 @@ const plans = [
     price: '£199',
     period: '/month',
     description: 'For large organisations',
-    seats: 'Unlimited staff',
+    seats: 'Up to 100 staff',
     features: [
       'Everything in Standard',
       'NMC revalidation support',
@@ -170,7 +170,7 @@ const plans = [
       'Dedicated account manager',
       'Phone & live chat support',
     ],
-    cta: 'Contact Sales',
+    cta: 'Get Started',
     highlighted: false,
     color: '',
   },
@@ -217,6 +217,7 @@ export default function LandingPage() {
   const [activeCourseFilter, setActiveCourseFilter] = useState('All');
   const [openFaq, setOpenFaq]                 = useState<number | null>(null);
   const [contactOpen, setContactOpen]         = useState(false);
+  const [getStartedOpen, setGetStartedOpen]   = useState(false);
 
   const visibleCourses = activeCourseFilter === 'All'
     ? allCourses
@@ -253,9 +254,47 @@ export default function LandingPage() {
               <Link href="/login">
                 <Button variant="ghost" size="sm" className="text-slate-600">Sign In</Button>
               </Link>
-              <Link href="/signup">
-                <Button size="sm" className="bg-[#005EB8] hover:bg-[#004a93] text-white">Get Started</Button>
-              </Link>
+              <div className="relative">
+                <Button
+                  size="sm"
+                  className="bg-[#005EB8] hover:bg-[#004a93] text-white"
+                  onClick={() => setGetStartedOpen(prev => !prev)}
+                >
+                  Get Started
+                  <ChevronDown className={`ml-1.5 w-3.5 h-3.5 transition-transform ${getStartedOpen ? 'rotate-180' : ''}`} />
+                </Button>
+                {getStartedOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setGetStartedOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                      <div className="p-1.5">
+                        <Link href="/signup" onClick={() => setGetStartedOpen(false)}>
+                          <div className="flex items-start gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
+                            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-[#005EB8] transition-colors">
+                              <Building2 className="w-4.5 h-4.5 text-[#005EB8] group-hover:text-white transition-colors" style={{width:'18px',height:'18px'}} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">Organisation</p>
+                              <p className="text-xs text-slate-500 leading-snug mt-0.5">For care homes & social care services managing a team</p>
+                            </div>
+                          </div>
+                        </Link>
+                        <Link href="/signup/individual" onClick={() => setGetStartedOpen(false)}>
+                          <div className="flex items-start gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
+                            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-amber-500 transition-colors">
+                              <UserCheck className="w-4.5 h-4.5 text-amber-600 group-hover:text-white transition-colors" style={{width:'18px',height:'18px'}} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">Individual Carer</p>
+                              <p className="text-xs text-slate-500 leading-snug mt-0.5">Get your Care Certificate or full course access independently</p>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -281,7 +320,10 @@ export default function LandingPage() {
                 <Button variant="outline" size="sm" className="w-full">Sign In</Button>
               </Link>
               <Link href="/signup" className="flex-1">
-                <Button size="sm" className="w-full bg-[#005EB8] text-white">Get Started</Button>
+                <Button size="sm" className="w-full bg-[#005EB8] text-white text-xs">Organisation</Button>
+              </Link>
+              <Link href="/signup/individual" className="flex-1">
+                <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs">Individual</Button>
               </Link>
             </div>
           </div>
@@ -806,6 +848,37 @@ export default function LandingPage() {
                   </Link>
                 </div>
               ))}
+
+              {/* Enterprise / large org card */}
+              <div className="bg-slate-900 rounded-2xl p-8 flex flex-col border border-slate-700">
+                <div className="mb-6">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Enterprise</p>
+                  <h3 className="text-xl font-bold text-white mb-2">More than 100 staff?</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    We offer custom pricing and dedicated support for larger organisations. Get in touch and we'll put together a plan that fits your team.
+                  </p>
+                </div>
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {[
+                    'Custom seat limit',
+                    'Dedicated account manager',
+                    'Bulk onboarding support',
+                    'Custom reporting & CQC exports',
+                    'Priority phone & live chat support',
+                  ].map(f => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-500" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <a href="mailto:support@skillguardian.co.uk">
+                  <Button className="w-full bg-white text-slate-900 hover:bg-slate-100 font-semibold">
+                    Contact Us
+                  </Button>
+                </a>
+                <p className="text-center text-xs text-slate-500 mt-3">support@skillguardian.co.uk</p>
+              </div>
             </div>
           </div>
 
@@ -816,7 +889,7 @@ export default function LandingPage() {
               <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Organisations & Care Homes</span>
               <div className="h-px flex-1 bg-slate-100" />
             </div>
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
               {plans.map(plan => (
                 <div
                   key={plan.name}
@@ -850,7 +923,7 @@ export default function LandingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href={plan.name === 'Premium' ? '#pricing' : `/signup?plan=${plan.name.toLowerCase()}`}>
+                  <Link href={`/signup?plan=${plan.name.toLowerCase()}`}>
                     <Button className={`w-full ${plan.highlighted ? 'bg-white text-[#005EB8] hover:bg-blue-50' : 'bg-[#005EB8] text-white hover:bg-[#004a93]'}`}>
                       {plan.cta}
                     </Button>
@@ -892,41 +965,6 @@ export default function LandingPage() {
                 )}
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Final CTA ── */}
-      <section className="py-20 bg-gradient-to-br from-[#005EB8] to-[#1E6B8C] text-white">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Get Started?</h2>
-          <p className="text-blue-200 mb-10 text-lg max-w-2xl mx-auto leading-relaxed">
-            Whether you're an individual carer starting your career or an organisation managing a team,
-            SkillGuardian has a plan for you.
-          </p>
-          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-200 mb-2">Individual Carer</p>
-              <p className="font-bold text-xl text-white mb-1">Care Certificate — £29</p>
-              <p className="text-sm text-blue-200 mb-4">All 16 standards. Instant portfolio certificate.</p>
-              <Link href="/signup/individual">
-                <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold">
-                  Start My Certificate
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wider text-blue-200 mb-2">Organisation</p>
-              <p className="font-bold text-xl text-white mb-1">From £49/month</p>
-              <p className="text-sm text-blue-200 mb-4">Full team management. CQC compliance dashboard.</p>
-              <Link href="/signup">
-                <Button className="w-full bg-white text-[#005EB8] hover:bg-blue-50 font-semibold">
-                  Set Up My Organisation
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </section>

@@ -348,7 +348,11 @@ export default function OrganisationsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Subscription Tier</Label>
-                <Select value={formData.subscription_tier} onValueChange={v => setFormData(p => ({ ...p, subscription_tier: v as SubscriptionTier }))}>
+                <Select value={formData.subscription_tier} onValueChange={v => {
+                  const tier = v as SubscriptionTier;
+                  const maxByTier: Record<SubscriptionTier, number> = { basic: 10, standard: 30, premium: 100 };
+                  setFormData(p => ({ ...p, subscription_tier: tier, seat_limit: Math.min(p.seat_limit, maxByTier[tier]) }));
+                }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="basic">Basic (£49/mo)</SelectItem>
@@ -359,7 +363,20 @@ export default function OrganisationsPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Seat Limit</Label>
-                <Input type="number" value={formData.seat_limit} onChange={e => setFormData(p => ({ ...p, seat_limit: parseInt(e.target.value) || 10 }))} min={1} />
+                <Input
+                  type="number"
+                  value={formData.seat_limit}
+                  onChange={e => {
+                    const val = parseInt(e.target.value) || 10;
+                    const max = formData.subscription_tier === 'premium' ? 100 : formData.subscription_tier === 'standard' ? 30 : 10;
+                    setFormData(p => ({ ...p, seat_limit: Math.min(val, max) }));
+                  }}
+                  min={1}
+                  max={formData.subscription_tier === 'premium' ? 100 : formData.subscription_tier === 'standard' ? 30 : 10}
+                />
+                {formData.subscription_tier === 'premium' && (
+                  <p className="text-xs text-slate-500">Premium tier is limited to 100 staff. For larger teams, contact support.</p>
+                )}
               </div>
             </div>
             <div className="space-y-1.5">

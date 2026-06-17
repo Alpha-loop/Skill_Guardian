@@ -613,7 +613,7 @@ function AdminOverview() {
             count: 'exact',
             head: true,
           })
-          .eq('status', 'completed'),
+          .eq('status', 'passed'),
 
         supabase
           .from('user_courses')
@@ -641,7 +641,7 @@ function AdminOverview() {
               last_name
             )
           `)
-          .eq('status', 'completed');
+          .eq('status', 'passed');
 
       
       if (topLearnersRes.data) {

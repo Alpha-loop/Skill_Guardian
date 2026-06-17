@@ -282,19 +282,46 @@ export default function EmployeesPage() {
     setSaving(false);
   };
 
-  const toggleEmployee = (id: string) => {
-    setSelectedEmployees(prev =>
-      prev.includes(id)
-        ? prev.filter(x => x !== id)
-        : [...prev, id]
-    );
+
+  const toggleEmployee = (employeeId: string) => {
+    setSelectedEmployees(prev => {
+      if (prev.includes(employeeId)) {
+        return prev.filter(id => id !== employeeId);
+      }
+
+      return [...prev, employeeId];
+    });
   };
 
+  const allSelected =
+    filtered.every(emp =>
+      selectedEmployees.includes(emp.id)
+    );
+
   const toggleSelectAll = () => {
-    if (selectedEmployees.length === filtered.length) {
-      setSelectedEmployees([]);
+    const filteredIds =
+      filtered.map(e => e.id);
+
+    const allSelected =
+      filteredIds.every(id =>
+        selectedEmployees.includes(id)
+      );
+
+    if (allSelected) {
+      setSelectedEmployees(prev =>
+        prev.filter(
+          id => !filteredIds.includes(id)
+        )
+      );
     } else {
-      setSelectedEmployees(filtered.map(e => e.id));
+      setSelectedEmployees(prev =>
+        Array.from(
+          new Set([
+            ...prev,
+            ...filteredIds,
+          ])
+        )
+      );
     }
   };
 
@@ -546,12 +573,10 @@ export default function EmployeesPage() {
               >
                 <span>
                   <Checkbox
-                    checked={
-                      filtered.length > 0 &&
-                      selectedEmployees.length ===
-                        filtered.length
+                    checked={selectedEmployees.includes(emp.id)}
+                    onCheckedChange={() =>
+                      toggleEmployee(emp.id)
                     }
-                    onCheckedChange={toggleSelectAll}
                   />
                 </span>
                 <div>

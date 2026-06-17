@@ -24,7 +24,13 @@ const corsHeaders = {
 const TIER_SEAT_LIMITS: Record<string, number> = {
   basic: 10,
   standard: 30,
-  premium: 999,
+  premium: 100,
+};
+
+const TIER_CATEGORIES: Record<string, string[]> = {
+  basic:    ["core_mandatory"],
+  standard: ["core_mandatory", "legal_requirement", "role_based"],
+  premium:  ["core_mandatory", "legal_requirement", "role_based", "clinical_nurse", "management_leadership"],
 };
 
 function slugify(name: string): string {
@@ -146,6 +152,7 @@ Deno.serve(async (req: Request) => {
 
     if (userErr) {
       // Roll back the organisation if user creation fails
+      await supabase.auth.admin.deleteUser(newUser.user.id);
       await supabase.from("organisations").delete().eq("id", org.id);
       console.error("Auth user creation error:", userErr);
       return errResponse(userErr.message, 400);
@@ -169,6 +176,56 @@ Deno.serve(async (req: Request) => {
       await supabase.from("organisations").delete().eq("id", org.id);
       console.error("Profile upsert error:", profileErr);
       return errResponse("Failed to create user profile. Please try again.", 500);
+    }
+
+    const allowedCategories = TIER_CATEGORIES[subscription_tier];
+
+    const { data: tierCourses, error: coursesErr } = await supabase
+      .from("courses")
+      .select("id, category, target_role")
+      .in("category", allowedCategories)
+      .eq("is_active", true);
+
+    if (!coursesErr && tierCourses && tierCourses.length > 0) {
+      // 1. Populate org_course_library for this organisation
+      const libraryRows = tierCourses.map((c: any) => ({
+        organisation_id: org.id,
+        course_id: c.id,
+        assigned_by: newUser.user.id,
+      }));
+
+      const { error: libraryErr } = await supabase
+        .from("org_course_library")
+        .upsert(libraryRows, { onConflict: "organisation_id,course_id", ignoreDuplicates: true });
+
+      if (libraryErr) {
+        console.error("org_course_library insert error:", libraryErr);
+      }
+
+      // 2. Assign courses to the admin user personally.
+      // Admin (registered manager) receives:
+      //   - all_staff courses from every allowed category
+      //   - all management_leadership courses (regardless of target_role) since they are the manager
+      const adminCourses = tierCourses.filter((c: any) =>
+        c.target_role === "all_staff" ||
+        c.category === "management_leadership"
+      );
+
+      if (adminCourses.length > 0) {
+        const userCourseRows = adminCourses.map((c: any) => ({
+          user_id: newUser.user.id,
+          course_id: c.id,
+          status: "not_started",
+        }));
+
+        const { error: ucErr } = await supabase
+          .from("user_courses")
+          .upsert(userCourseRows, { onConflict: "user_id,course_id", ignoreDuplicates: true });
+
+        if (ucErr) {
+          console.error("user_courses insert error:", ucErr);
+        }
+      }
     }
 
     return new Response(
