@@ -7,6 +7,8 @@ import { Organisation, SubscriptionTier, Course, CourseCategory } from '@/lib/ty
 import {
   Building2, Plus, Search, MoreHorizontal, Globe, Users,
   CheckCircle, XCircle, Edit, Loader2, BookOpen, Lock, Sparkles,
+  Trash,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +77,20 @@ export default function OrganisationsPage() {
   const [libraryCourseIds, setLibraryCourseIds] = useState<Set<string>>(new Set());
   const [librarySaving, setLibrarySaving] = useState(false);
   const [libraryLoading, setLibraryLoading] = useState(false);
+  const [
+    organisationToDelete,
+    setOrganisationToDelete,
+  ] = useState<any>(null);
+
+  const [
+    confirmationText,
+    setConfirmationText,
+  ] = useState("");
+
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from('organisations').select('*').order('created_at', { ascending: false });
@@ -107,6 +123,77 @@ export default function OrganisationsPage() {
     setFormData({ name: '', subdomain: '', contact_email: '', contact_person: '', subscription_tier: 'basic', seat_limit: 10, primary_color: '#005EB8' });
     setEditOrg(null);
     setModal(true);
+  };
+
+  const handleDeleteOrganisation =
+  async () => {
+
+    if (!organisationToDelete)
+      return;
+
+    try {
+
+      setDeleting(true);
+
+      const {
+        data: { session },
+      } =
+        await supabase.auth.getSession();
+
+      const response =
+        await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/delete-organisation`,
+          {
+            method: "POST",
+            headers: {
+              Authorization:
+                `Bearer ${session?.access_token}`,
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              organisationId:
+                organisationToDelete.id,
+            }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.error
+        );
+      }
+
+      toast({
+        title:
+          "Organisation deleted",
+        description:
+          `${organisationToDelete.name} has been removed.`,
+      });
+
+      setOrganisationToDelete(null);
+      setConfirmationText("");
+
+      await load();
+
+    } catch (error: any) {
+
+      toast({
+        title: "Delete failed",
+        description:
+          error.message ||
+          "Failed to delete organisation",
+        variant: "destructive",
+      });
+
+    } finally {
+
+      setDeleting(false);
+
+    }
   };
 
   const openEdit = (org: Organisation) => {
@@ -295,6 +382,14 @@ export default function OrganisationsPage() {
                     <DropdownMenuItem onClick={() => openEdit(org)}>
                       <Edit className="w-4 h-4 mr-2" /> Edit Details
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={() =>
+                        setOrganisationToDelete(org)
+                      }
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => openLibrary(org)}>
                       <BookOpen className="w-4 h-4 mr-2" /> Assign Courses
                     </DropdownMenuItem>
@@ -393,6 +488,90 @@ export default function OrganisationsPage() {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editOrg ? 'Save Changes' : 'Create Organisation'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!organisationToDelete}
+        onOpenChange={() => {
+          setOrganisationToDelete(null);
+          setConfirmationText("");
+        }}
+      >
+        <DialogContent>
+
+          <DialogHeader>
+            <DialogTitle>
+              Delete Organisation
+            </DialogTitle>
+
+            <DialogDescription>
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {organisationToDelete && (
+            <>
+
+              <div className="rounded-md bg-red-50 border border-red-200 p-4 text-sm">
+
+                <p className="font-medium text-red-700">
+                  Organisation
+                </p>
+
+                <p className="mt-1">
+                  {organisationToDelete.name}
+                </p>
+
+              </div>
+
+              <div className="space-y-2">
+
+                <Label>
+                  Type the organisation name to confirm
+                </Label>
+
+                <Input
+                  value={confirmationText}
+                  onChange={(e) =>
+                    setConfirmationText(
+                      e.target.value
+                    )
+                  }
+                />
+
+              </div>
+
+            </>
+          )}
+
+          <DialogFooter>
+
+            <Button
+              variant="outline"
+              onClick={() =>
+                setOrganisationToDelete(null)
+              }
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="destructive"
+              disabled={
+                confirmationText !==
+                  organisationToDelete?.name ||
+                deleting
+              }
+              onClick={handleDeleteOrganisation}
+            >
+              {deleting
+                ? "Deleting..."
+                : "Delete Organisation"}
+            </Button>
+
+          </DialogFooter>
+
         </DialogContent>
       </Dialog>
 

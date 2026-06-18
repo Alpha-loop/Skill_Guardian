@@ -18,7 +18,7 @@ export default function SettingsPage() {
 
     
 
-    const { organisation, refreshProfile } = useAuth();
+    const { organisation, refreshProfile, profile } = useAuth();
 
     const [logoUploading, setLogoUploading] =
     useState(false);
@@ -71,6 +71,8 @@ export default function SettingsPage() {
       password
     );
   };
+
+  const isOrg = profile?.role === 'org_admin'
 
   console.log("Current Organisation:", organisation);
 
@@ -525,22 +527,25 @@ export default function SettingsPage() {
           </Button>
         </form>
       </div>
+    
+
+    {isOrg && (
+      <>
       <div className="bg-white rounded-2xl border shadow-sm p-6 max-w-7xl">
-    <div className="flex items-center gap-3 mb-6">
-        <Building2 className="w-5 h-5 text-[#005EB8]" />
+        <div className="flex items-center gap-3 mb-6">
+          <Building2 className="w-5 h-5 text-[#005EB8]" />
 
-        <div>
-        <h2 className="font-semibold">
-            Organisation Branding
-        </h2>
+          <div>
+            <h2 className="font-semibold">
+                Organisation Branding
+            </h2>
 
-        <p className="text-sm text-slate-500">
-            Customize your organisation.
-        </p>
+            <p className="text-sm text-slate-500">
+                Customize your organisation.
+            </p>
+          </div>
         </div>
-    </div>
-
-    <div className="space-y-5">
+        <div className="space-y-5">
 
         <div>
         <Label>
@@ -608,6 +613,8 @@ export default function SettingsPage() {
 
     </div>
     </div>
+      </>
+    )}
     </div>
   );
 }

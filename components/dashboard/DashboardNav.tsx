@@ -15,6 +15,7 @@ import { useNotifications, Notification } from '@/contexts/NotificationContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import Image from 'next/image';
 
 const employeeNav = [
   { href: '/dashboard',              icon: Home,      label: 'Dashboard' },
@@ -42,7 +43,7 @@ const superAdminNav = [
   { href: '/dashboard/organisations', icon: Building2, label: 'Organisations' },
   { href: '/dashboard/courses',       icon: BookOpen,  label: 'Course Library' },
   { href: '/dashboard/analytics',     icon: BarChart3, label: 'Analytics' },
-  { href: '/dashboard/reports',       icon: FileCheck, label: 'CQC Reports' },
+  // { href: '/dashboard/reports',       icon: FileCheck, label: 'CQC Reports' },
   { href: '/dashboard/profile',      icon: User,      label: 'My Profile' },
   { href: '/dashboard/settings',     icon: Settings,  label: 'Settings' },
   { href: '/dashboard/notifications', icon: Bell,      label: 'Notifications' },
@@ -186,7 +187,7 @@ export default function DashboardNav() {
     <>
       {/* Logo + bell row */}
       <div className={cn(
-        'flex items-center gap-3 px-4 py-5 border-b border-slate-100',
+        'flex items-center gap-3 px-4 border-b border-slate-100',
         collapsed && !mobileOpen && 'justify-center px-3'
       )}>
         {organisation?.logo_url ? (
@@ -197,22 +198,25 @@ export default function DashboardNav() {
           />
         ) : (
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{
-              backgroundColor: brandColor,
-            }}
+            className="w-[180px] h-20 rounded-lg flex items-center justify-center"
           >
-            <span
-              className="font-black text-white text-sm tracking-tight leading-none"
-              style={{ letterSpacing: '-0.03em' }}
-            >
-              SG
-            </span>
+            <div className="relative w-full h-full">
+              <Image
+                src="/SG_logo2.png"
+                alt="SkillGuardian"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
         )}
         {(!collapsed || mobileOpen) && (
           <>
-            <span className="font-bold text-slate-900 text-base flex-1">SkillGuardian</span>
+            {organisation?.logo_url ? (
+              <span className="font-bold text-slate-900 text-base flex-1">SkillGuardian</span>
+            ) : ""}
+            {/*  */}
             {/* Bell button */}
             <div ref={notifRef} className="relative">
               <button

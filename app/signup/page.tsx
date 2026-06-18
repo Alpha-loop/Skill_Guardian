@@ -447,9 +447,9 @@ export default function SignupPage() {
               ))}
             </div>
 
-            <div className="mt-6 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500 text-center">
+            {/* <div className="mt-6 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500 text-center">
               No credit card required to get started. You won't be charged until your trial ends.
-            </div>
+            </div> */}
 
             <div className="mt-6 flex justify-between">
               <Button variant="outline" onClick={back} className="h-11 px-6">

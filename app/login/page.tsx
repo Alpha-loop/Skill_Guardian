@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -43,8 +44,16 @@ export default function LoginPage() {
             <ArrowLeft className="w-4 h-4" />
             Back to home
           </Link>
-          <div className="w-12 h-12 bg-[#005EB8] rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="font-black text-white text-lg tracking-tight" style={{ letterSpacing: '-0.03em' }}>SG</span>
+          <div className="w-[200px] h-20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="relative w-full h-full">
+              <Image
+                src="/SG_logo2-.png"
+                alt="SkillGuardian"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
           <p className="text-slate-500 mt-1">Sign in to your SkillGuardian account</p>
