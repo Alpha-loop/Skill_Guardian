@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const VALID_PROFESSIONAL_ROLES = [
   "care_assistant",
+  "senior_carer",
   "rgn",
   "rmn",
   "nurse_associate",
