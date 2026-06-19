@@ -194,16 +194,57 @@ Deno.serve(async (req: Request) => {
           },
         });
 
-      await supabaseAdmin.from("profiles").upsert({
-        id: userId,
-        email,
-        first_name,
-        last_name,
-        role: role ?? "employee",
-        professional_role,
-        organisation_id: orgId,
-        is_active: true,
-      }, { onConflict: "id" });
+      // await supabaseAdmin.from("profiles").upsert({
+      //   id: userId,
+      //   email,
+      //   first_name,
+      //   last_name,
+      //   role: role ?? "employee",
+      //   professional_role,
+      //   organisation_id: orgId,
+      //   is_active: true,
+      // }, { onConflict: "id" });
+
+
+      const { error: profileError } =
+        await supabaseAdmin
+          .from("profiles")
+          .upsert(
+            {
+              id: userId,
+              email,
+              first_name,
+              last_name,
+              role: role ?? "employee",
+              professional_role,
+              organisation_id: orgId,
+              is_active: true,
+            },
+            {
+              onConflict: "id",
+            }
+          );
+
+      if (profileError) {
+        console.error(
+          "PROFILE UPSERT ERROR:",
+          profileError
+        );
+
+        return new Response(
+          JSON.stringify({
+            error: profileError.message,
+          }),
+          {
+            status: 500,
+            headers: {
+              ...corsHeaders,
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+      }
 
       // Assign courses
       if (courses && courses.length > 0) {
