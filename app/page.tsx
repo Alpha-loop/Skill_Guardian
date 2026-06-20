@@ -854,37 +854,6 @@ export default function LandingPage() {
                   </Link>
                 </div>
               ))}
-
-              {/* Enterprise / large org card */}
-              <div className="bg-slate-900 rounded-2xl p-8 flex flex-col border border-slate-700">
-                <div className="mb-6">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Enterprise</p>
-                  <h3 className="text-xl font-bold text-white mb-2">More than 100 staff?</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">
-                    We offer custom pricing and dedicated support for larger organisations. Get in touch and we'll put together a plan that fits your team.
-                  </p>
-                </div>
-                <ul className="space-y-2.5 mb-8 flex-1">
-                  {[
-                    'Custom seat limit',
-                    'Dedicated account manager',
-                    'Bulk onboarding support',
-                    'Custom reporting & CQC exports',
-                    'Priority phone & live chat support',
-                  ].map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
-                      <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-500" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <a href="mailto:support@skillguardian.co.uk">
-                  <Button className="w-full bg-white text-slate-900 hover:bg-slate-100 font-semibold">
-                    Contact Us
-                  </Button>
-                </a>
-                <p className="text-center text-xs text-slate-500 mt-3">support@skillguardian.co.uk</p>
-              </div>
             </div>
           </div>
 
@@ -895,7 +864,7 @@ export default function LandingPage() {
               <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Organisations & Care Homes</span>
               <div className="h-px flex-1 bg-slate-100" />
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
               {plans.map(plan => (
                 <div
                   key={plan.name}
@@ -937,6 +906,37 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Enterprise / large org card */}
+          <div className="bg-slate-900 rounded-2xl p-8 flex flex-col border border-slate-700 mt-12">
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Enterprise</p>
+              <h3 className="text-xl font-bold text-white mb-2">More than 100 staff?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                We offer custom pricing and dedicated support for larger organisations. Get in touch and we'll put together a plan that fits your team.
+              </p>
+            </div>
+            <ul className="space-y-2.5 mb-8 flex-1">
+              {[
+                'Custom seat limit',
+                'Dedicated account manager',
+                'Bulk onboarding support',
+                'Custom reporting & CQC exports',
+                'Priority phone & live chat support',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2 text-sm text-slate-300">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-slate-500" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <a href="mailto:support@skillguardian.co.uk">
+              <Button className="w-full bg-white text-slate-900 hover:bg-slate-100 font-semibold">
+                Contact Us
+              </Button>
+            </a>
+            <p className="text-center text-xs text-slate-500 mt-3">support@skillguardian.co.uk</p>
           </div>
         </div>
       </section>

@@ -437,7 +437,7 @@ export default function BillingPage() {
 
             <Button
               onClick={() =>
-                router.push('/pricing')
+                router.push('/billing/upgrade')
               }
               style={{
                 backgroundColor: brandColor,
