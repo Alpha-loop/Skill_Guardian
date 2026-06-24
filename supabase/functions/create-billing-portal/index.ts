@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
 
     const siteUrl =
       Deno.env.get("SITE_URL") ??
-      "http://localhost:3000";
+      "https://skillguardian.co.uk";
 
     console.log(
       "Creating billing portal for customer:",

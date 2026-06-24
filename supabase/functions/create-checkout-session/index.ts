@@ -182,12 +182,12 @@ Deno.serve(async (req) => {
         },
 
         success_url:
-          // `${Deno.env.get("SITE_URL")}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-          'https://skillguardian.co.uk/billing/success?session_id={CHECKOUT_SESSION_ID}',
+          `${Deno.env.get("SITE_URL")}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+          // 'https://skillguardian.co.uk/billing/success?session_id={CHECKOUT_SESSION_ID}',
 
         cancel_url:
-          // `${Deno.env.get("SITE_URL")}/pricing`,
-          'https://skillguardian.co.uk/billing',
+          `${Deno.env.get("SITE_URL")}/pricing`,
+          // 'https://skillguardian.co.uk/billing',
       });
 
     return new Response(
